@@ -2,11 +2,15 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import os
+import platform
 
-def capture_gesture_data(gesture_label, num_samples=50, save_dir="data"):
+def capture_gesture_data(gesture_label, num_samples=50, save_dir="data", camera_index=0):
     mp_holistic = mp.solutions.holistic
     holistic = mp_holistic.Holistic()
-    cap = cv2.VideoCapture(0)
+    if platform.system() == "Darwin":
+        cap = cv2.VideoCapture(camera_index, cv2.CAP_AVFOUNDATION)
+    else:
+        cap = cv2.VideoCapture(camera_index)
     gesture_dir = os.path.join(save_dir, gesture_label)
     os.makedirs(gesture_dir, exist_ok=True)
     count = 0
@@ -42,4 +46,5 @@ if __name__ == "__main__":
 
     gesture_label = input("Enter gesture label: ")
     num_samples = int(input("Enter number of samples to capture: "))
-    capture_gesture_data(gesture_label, num_samples)
+    camera_index = int(input("Enter working camera index from above: "))
+    capture_gesture_data(gesture_label, num_samples, camera_index=camera_index)

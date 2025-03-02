@@ -6,6 +6,7 @@ import pyautogui
 import time
 import threading
 from voice_recog import listen_voice_commands
+import platform
 
 # Logging function: append errors or unrecognized commands to log.txt.
 def log_message(message):
@@ -48,11 +49,14 @@ def perform_action(gesture):
         log_message(f"Unrecognized gesture: {gesture}")
 
 # Main loop: captures camera frames, processes gestures, and optionally displays the feed.
-def gesture_recognition_loop(model):
+def gesture_recognition_loop(model, camera_index=0):
     mp_holistic = mp.solutions.holistic
     holistic = mp_holistic.Holistic(min_detection_confidence=0.5, 
                                     min_tracking_confidence=0.5)
-    cap = cv2.VideoCapture(0)
+    if platform.system() == "Darwin":
+        cap = cv2.VideoCapture(camera_index, cv2.CAP_AVFOUNDATION)
+    else:
+        cap = cv2.VideoCapture(camera_index)
     real_time_feed = True  # Optionally controlled via GUI in an extended version.
     try:
         while cap.isOpened():
@@ -86,12 +90,13 @@ def main():
         print("Failed to load model. Exiting.")
         return
 
+    camera_index = int(input("Enter camera index (default=0): ") or 0)
     # Start voice recognition in a separate thread.
     voice_thread = threading.Thread(target=listen_voice_commands, daemon=True)
     voice_thread.start()
 
     # Begin gesture recognition.
-    gesture_recognition_loop(model)
+    gesture_recognition_loop(model, camera_index)
 
 if __name__ == "__main__":
     main()
