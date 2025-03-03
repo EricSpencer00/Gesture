@@ -13,6 +13,16 @@ def log_message(message):
     with open("log.txt", "a") as log_file:
         log_file.write(f"{time.ctime()}: {message}\n")
 
+def get_continuity_camera_index():
+    """Auto-detect Continuity Camera index"""
+    for i in range(10):
+        cap = cv2.VideoCapture(i, cv2.CAP_AVFOUNDATION)
+        ret, _ = cap.read()
+        if ret:
+            cap.release()
+            return i
+    return 0  # Fallback to default camera index
+
 # Load the trained gesture model.
 def load_model(model_path="model.extension"):
     try:
@@ -90,7 +100,8 @@ def main():
         print("Failed to load model. Exiting.")
         return
 
-    camera_index = int(input("Enter camera index (default=0): ") or 0)
+    camera_index = get_continuity_camera_index()
+    print(f"Continuity Camera index: {camera_index}")
     # Start voice recognition in a separate thread.
     voice_thread = threading.Thread(target=listen_voice_commands, daemon=True)
     voice_thread.start()
