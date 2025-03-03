@@ -1,113 +1,105 @@
+import threading
+import subprocess
+import time
+
+# --- Voice Control Section ---
+import speech_recognition as sr
+import pyttsx3
+
+def voice_control():
+    recognizer = sr.Recognizer()
+    engine = pyttsx3.init()
+
+    with sr.Microphone() as source:
+        print("Voice Control: Listening...")
+        while True:
+            try:
+                audio = recognizer.listen(source, timeout=5)
+                command = recognizer.recognize_google(audio)
+                print("Heard:", command)
+                
+                # Execute macOS command based on recognized text
+                if "open Safari" in command.lower():
+                    subprocess.call(["osascript", "-e", 'tell application "Safari" to activate'])
+                    response = "Opening Safari"
+                elif "what time" in command.lower():
+                    response = time.strftime("The time is %H:%M")
+                else:
+                    response = "Command not recognized"
+                
+                # Provide audible feedback using macOS say command
+                subprocess.call(["say", response])
+                # Alternatively, use pyttsx3:
+                # engine.say(response)
+                # engine.runAndWait()
+            except sr.WaitTimeoutError:
+                print("No speech detected, continuing...")
+            except sr.UnknownValueError:
+                print("Could not understand audio")
+            except Exception as e:
+                print("Voice error:", e)
+
+# --- Gesture Control Section ---
 import cv2
 import mediapipe as mp
-import numpy as np
-import pickle
 import pyautogui
-import time
-import threading
-from voice_recog import listen_voice_commands
-import platform
 
-# Logging function: append errors or unrecognized commands to log.txt.
-def log_message(message):
-    with open("log.txt", "a") as log_file:
-        log_file.write(f"{time.ctime()}: {message}\n")
+def gesture_control():
+    mp_hands = mp.solutions.hands
+    hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.5)
+    mp_draw = mp.solutions.drawing_utils
 
-def get_continuity_camera_index():
-    """Auto-detect Continuity Camera index"""
-    for i in range(10):
-        cap = cv2.VideoCapture(i, cv2.CAP_AVFOUNDATION)
-        ret, _ = cap.read()
-        if ret:
-            cap.release()
-            return i
-    return 0  # Fallback to default camera index
-
-# Load the trained gesture model.
-def load_model(model_path="model.extension"):
-    try:
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
-        print("Model loaded successfully.")
-        return model
-    except Exception as e:
-        log_message(f"Error loading model: {e}")
-        return None
-
-# Process landmarks using the loaded model.
-def process_gesture(landmarks, model):
-    if landmarks is None:
-        return None
-    # Flatten landmarks as a placeholder for a real feature vector extraction.
-    feature_vector = np.array([landmarks.flatten()])
-    try:
-        prediction = model.predict(feature_vector)
-        return prediction[0]
-    except Exception as e:
-        log_message(f"Error in gesture prediction: {e}")
-        return None
-
-# Map a recognized gesture to a system action.
-def perform_action(gesture):
-    if gesture == "scroll":
-        pyautogui.scroll(10)
-    elif gesture == "zoom":
-        pyautogui.hotkey('ctrl', '+')
-    elif gesture == "select":
-        pyautogui.click()
-    else:
-        log_message(f"Unrecognized gesture: {gesture}")
-
-# Main loop: captures camera frames, processes gestures, and optionally displays the feed.
-def gesture_recognition_loop(model, camera_index=0):
-    mp_holistic = mp.solutions.holistic
-    holistic = mp_holistic.Holistic(min_detection_confidence=0.5, 
-                                    min_tracking_confidence=0.5)
-    if platform.system() == "Darwin":
-        cap = cv2.VideoCapture(camera_index, cv2.CAP_AVFOUNDATION)
-    else:
-        cap = cv2.VideoCapture(camera_index)
-    real_time_feed = True  # Optionally controlled via GUI in an extended version.
-    try:
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                log_message("Failed to grab frame from camera.")
-                break
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = holistic.process(image)
-            # Check for left-hand landmarks; similar logic can be added for right-hand or body posture.
-            if results.left_hand_landmarks:
-                landmarks = np.array([[lm.x, lm.y, lm.z] for lm in results.left_hand_landmarks.landmark])
-                gesture = process_gesture(landmarks, model)
-                if gesture:
-                    print(f"Detected gesture: {gesture}")
-                    perform_action(gesture)
-            # Display the camera feed (optional).
-            if real_time_feed:
-                cv2.imshow('AI Control - Gesture Recognition', frame)
-            if cv2.waitKey(5) & 0xFF == 27:  # Press ESC to exit.
-                break
-    except Exception as e:
-        log_message(f"Error in gesture recognition loop: {e}")
-    finally:
-        cap.release()
-        cv2.destroyAllWindows()
-
-def main():
-    model = load_model()
-    if model is None:
-        print("Failed to load model. Exiting.")
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Webcam not accessible")
         return
 
-    camera_index = get_continuity_camera_index()
-    print(f"Continuity Camera index: {camera_index}")
-    # Start voice recognition in a separate thread.
-    voice_thread = threading.Thread(target=listen_voice_commands, daemon=True)
-    voice_thread.start()
+    print("Gesture Control: Starting webcam...")
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    # Begin gesture recognition.
-    gesture_recognition_loop(model, camera_index)
+        # Convert the BGR image to RGB.
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb_frame)
 
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+                # Example: Check if index finger is raised (customize as needed)
+                # Landmark 8 is the tip of the index finger.
+                index_tip = hand_landmarks.landmark[8]
+                wrist = hand_landmarks.landmark[0]
+                if index_tip.y < wrist.y:  # simple check: index finger is above the wrist
+                    print("Gesture detected: Index finger raised!")
+                    # Map to an action, e.g., simulate a keypress:
+                    pyautogui.press('space')
+                    time.sleep(1)  # debounce to avoid multiple triggers
+
+        cv2.imshow("Gesture Control (press Q to quit)", frame)
+        if cv2.waitKey(5) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# --- Main Application ---
 if __name__ == "__main__":
-    main()
+    # Stubs
+    import stubs
+
+    # Run voice control and gesture control concurrently using threading
+    voice_thread = threading.Thread(target=voice_control, daemon=True)
+    gesture_thread = threading.Thread(target=gesture_control, daemon=True)
+
+    voice_thread.start()
+    gesture_thread.start()
+
+    print("Application is running. Press Ctrl+C to exit.")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting application.")

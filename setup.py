@@ -1,27 +1,11 @@
 from setuptools import setup
 
-APP = ['app.py']
-DATA_FILES = []
+APP = ['app.py']  # Replace with your main script filename
+DATA_FILES = []  # Add any additional files (icons, etc.)
 OPTIONS = {
     'argv_emulation': True,
-    'packages': [
-        'cv2',  # OpenCV core module
-        'mediapipe',
-        'numpy',
-        'pyautogui',
-        'pyttsx3',
-        'scikit_learn',  # Fix scikit-learn issue
-        'SpeechRecognition',  # Fix SpeechRecognition issue
-    ],
-    'includes': [
-        'cv2', 
-        'opencv-contrib-python',
-        'SpeechRecognition',
-        'scikit-learn'
-    ],
-    'excludes': [
-        'pytest',  # Exclude unnecessary test dependencies
-    ]
+    'packages': ['cv2', 'mediapipe', 'speech_recognition', 'pyttsx3', 'pyautogui', 'rubicon', 'rubicon.objc'],
+    'includes': ['rubicon', 'rubicon.objc'],
 }
 
 setup(
