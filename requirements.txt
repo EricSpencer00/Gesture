@@ -1,8 +1,8 @@
-opencv-contrib-python==4.5.5.62
-mediapipe==0.8.9.1
-numpy==1.21.2
-pyttsx3==2.90
-SpeechRecognition==3.8.1
-pyaudio==0.2.11
-scikit-learn==0.24.2
-pyautogui==0.9.53
+mediapipe==0.10.21
+numpy==2.2.3
+opencv_contrib_python==4.11.0.86
+opencv_python_headless==4.11.0.86
+pyautogui==0.9.54
+pyttsx3==2.98
+scikit_learn==1.6.1
+SpeechRecognition==3.14.1
