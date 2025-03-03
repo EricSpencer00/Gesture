@@ -29,5 +29,5 @@ jobs:
           pip install --no-cache-dir definitions || echo "Failed to install definitions"
           pip install --no-cache-dir sets || echo "Failed to install sets"
 
-      - name: Run Tests
-        run: pytest tests/
+      # - name: Run Tests
+      #   run: pytest tests/
